@@ -13,4 +13,6 @@ Just select your generated rig and make sure the metarig is visible in the scene
 
 You can decide if you want to have 4 limb bones or 2 with the split bones bool.
 
+There is also a bool check for deleting a separate root bone. It is there for if you're using Rigify feature sets like the Experimental rigs from Alexander Gavrilov.
+
 / Elric Steelsword
