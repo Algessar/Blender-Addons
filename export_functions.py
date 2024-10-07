@@ -12,18 +12,23 @@
 # Export the rig as FBX
 # Remove the NLA strips that were exported
 
-# Get Actions from the active object
-    # _actions = _action_list_helper.collect_action_list() # This is the old version, using FrameRanger utilities. 
-    # Which means I can see which helper functions I need to write(steal).
-
 import sys
 import os
-
-module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "D:/Blender_Projects/Addons/Scripting/TestFolderVSCode"))
-if module_path not in sys.path:
-    sys.path.append(module_path)
 import bpy
-from helper_functions import Action_List_Helper   
+
+home_dir = os.path.expanduser("~")
+
+# Construct the path to the Blender addons directory
+blender_addons_path = os.path.join(home_dir, "AppData", "Roaming", "Blender Foundation", "Blender", "4.2", "scripts", "addons", "Elrig")
+
+# Add the constructed path to sys.path if it's not already there
+if blender_addons_path not in sys.path:
+    sys.path.append(blender_addons_path)
+
+#module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "D:/Blender_Projects/Addons/Scripting/Blender_Addons/ElRig"))
+#if module_path not in sys.path:
+#    sys.path.append(module_path)
+from helper_functions import Action_List_Helper# import Action_List_Helper
 
 
     
@@ -128,6 +133,7 @@ def unregister():
 
 if __name__ == "__main__":
     register()
+    
 
 
 

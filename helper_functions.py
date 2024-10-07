@@ -122,11 +122,19 @@ class Action_List_Helper:
         return skipped
     
 
-#def register():
-#    bpy.utils.register_class(Action_List_Helper)
-#
-#def unregister():
-#    bpy.utils.unregister_class(Action_List_Helper)
+classes = []
 
-#if __name__ == "__main__":
-#    register()
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    
+
+
+def unregister():
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+    #del bpy.types.Scene.my_tool
+
+if __name__ == "__main__":
+    register()
+    

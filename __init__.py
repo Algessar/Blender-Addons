@@ -31,17 +31,30 @@ bl_info = {
 import sys
 import os
 import bpy
+
+home_dir = os.path.expanduser("~")
+
+# Construct the path to the Blender addons directory
+blender_addons_path = os.path.join(home_dir, "AppData", "Roaming", "Blender Foundation", "Blender", "4.2", "scripts", "addons", "Elrig")
+
+# Add the constructed path to sys.path if it's not already there
+if blender_addons_path not in sys.path:
+    sys.path.append(blender_addons_path)
+
 #path_with_forward_slashes = os.path.replace("\\", "/")
-module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "D:/Blender_Projects/Addons/Scripting/ElRig/Blender-Addons"))
-if module_path not in sys.path:
-    sys.path.append(module_path)
+#module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "D:/Blender_Projects/Addons/Scripting/ElRig/Blender_Addons"))
+#if module_path not in sys.path:
+#    sys.path.append(module_path)
 
 
 from .export_functions import register as register_export_actions, unregister as unregister_export_actions
 from .ExportUI import register as register_export_ui, unregister as unregister_export_ui
 from .convert_rig import register as register_convert_rig, unregister as unregister_convert_rig
-from .helper_functions import Action_List_Helper as Action_List_Helper
+#from .helper_functions import helper_functions
+from .helper_functions import register as register_helper_functions, unregister as unregister_helper_functions
 from .auto_FK_IK_switch import register as register_auto_FK_IK_switch, unregister as unregister_auto_FK_IK_switch
+
+#from . import helper_functions
 #from .simple_auto_switch import register as register_simple_auto_switch, unregister as unregister_simple_auto_switch
 
 ### REGISTER ###
@@ -51,8 +64,7 @@ def register():
     register_export_ui()
     register_convert_rig()
     register_auto_FK_IK_switch()
-    #bpy.utils.register_class(Action_List_Helper)
-    #register_simple_auto_switch()
+    
 
 
 def unregister():
@@ -60,8 +72,7 @@ def unregister():
     unregister_export_ui()
     unregister_convert_rig()
     unregister_auto_FK_IK_switch()
-    #bpy.utils.unregister_class(Action_List_Helper)
-    #unregister_simple_auto_switch()
+    
     
 
     

@@ -1,10 +1,23 @@
 import os
+import sys
 import bpy
-import textwrap
+
+home_dir = os.path.expanduser("~")
+
+# Construct the path to the Blender addons directory
+blender_addons_path = os.path.join(home_dir, "AppData", "Roaming", "Blender Foundation", "Blender", "4.2", "scripts", "addons", "Elrig")
+
+# Add the constructed path to sys.path if it's not already there
+if blender_addons_path not in sys.path:
+    sys.path.append(blender_addons_path)
+
+#module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "D:/Blender_Projects/Addons/Scripting/Blender_Addons/ElRig"))
+#if module_path not in sys.path:
+#    sys.path.append(module_path)
 from bpy.props import IntProperty, CollectionProperty, PointerProperty, StringProperty, BoolProperty
-#import HelperFunctions as hfunctions
-from helper_functions import Action_List_Helper
-import export_functions as export_functions
+from .helper_functions import Action_List_Helper
+
+import export_functions
 
 export_dir = ""
 #base_filename = "exported_rig"
@@ -43,11 +56,11 @@ clear_all_nla_tracks: BoolProperty(
     default=False
 ) # type: ignore 
 
-def draw_wrapped_label(layout, text, width=40):
-    lines = textwrap.wrap(text, width=width)
-    for line in lines:
-        layout.label(text=line)
-
+#def draw_wrapped_label(layout, text, width=40):
+#    lines = textwrap.wrap(text, width=width)
+#    for line in lines:
+#        layout.label(text=line)
+#
 # UI Panel
 class VIEW_3D_UI_Elements(bpy.types.Panel):
     bl_label = "Export UI"
@@ -260,7 +273,7 @@ classes = [ElRigActionItem,
            Custom_OT_SetFilePath,
            CUSTOM_OT_ExportRigOperator,
            ExportProperties,
-           BoolProperties,
+           BoolProperties,           
            ]
 
 def register():
