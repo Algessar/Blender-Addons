@@ -1,6 +1,16 @@
 # Blender Addons
  
-This shit's bugged yo. There's a hacky solution for import errors (I'm getting the AppData folder and directly pointing the imports to blender V 4.2. Don't judge. But do feel free to help me fix it.
-This probably broke things, since the Convert to Game Rig operator stopped working when I tested it as an actual addon. More things are likely to be broken.
+This is a work in progress. I can only guarantee that Converter_V3 is working. 
+
+
+Rigify Game Rig Converter:
+
+A generic converter for Rigify, to transform any generated rig into a working game rig.
+
+The script is fully agnostic to which type of metarig is used. 
+
+Just select your generated rig and make sure the metarig is visible in the scene (it is used for the conversion!).
+
+You can decide if you want to have 4 limb bones or 2 with the split bones bool.
 
 / Elric Steelsword
