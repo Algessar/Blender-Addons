@@ -1,23 +1,11 @@
 import os
-import sys
 import bpy
+from bpy.types import Operator, Panel, UIList
 
-home_dir = os.path.expanduser("~")
+from .helpers import Action_List_Helper
+from . import exportFunctions
 
-# Construct the path to the Blender addons directory
-blender_addons_path = os.path.join(home_dir, "AppData", "Roaming", "Blender Foundation", "Blender", "4.2", "scripts", "addons", "Elrig")
-
-# Add the constructed path to sys.path if it's not already there
-if blender_addons_path not in sys.path:
-    sys.path.append(blender_addons_path)
-
-#module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "D:/Blender_Projects/Addons/Scripting/Blender_Addons/ElRig"))
-#if module_path not in sys.path:
-#    sys.path.append(module_path)
-from bpy.props import IntProperty, CollectionProperty, PointerProperty, StringProperty, BoolProperty
-from .helper_functions import Action_List_Helper
-
-import export_functions
+from bpy.props import StringProperty, PointerProperty, BoolProperty, CollectionProperty, IntProperty
 
 export_dir = ""
 #base_filename = "exported_rig"
@@ -56,13 +44,7 @@ clear_all_nla_tracks: BoolProperty(
     default=False
 ) # type: ignore 
 
-#def draw_wrapped_label(layout, text, width=40):
-#    lines = textwrap.wrap(text, width=width)
-#    for line in lines:
-#        layout.label(text=line)
-#
-# UI Panel
-class VIEW_3D_UI_Elements(bpy.types.Panel):
+class VIEW_3D_UI_Elements(Panel):
     bl_label = "Export UI"
     bl_idname = "OBJECT_PT_ui_elements"
     bl_space_type = 'VIEW_3D'
@@ -74,11 +56,12 @@ class VIEW_3D_UI_Elements(bpy.types.Panel):
         layout = self.layout
         obj = context.object
         scene = context.scene
-        my_tool = scene.my_tool
+        export_tool = scene.my_tool
+        #clear_nla_tracks = scene.clear_nla_tracks
 
         if obj is not None:
             row = layout.row()
-            row.template_list("ACTION__UI_UL_actions", "", obj, "elrig_actions", obj, "elrig_active_action_index")
+            row.template_list("ACTION__UI_UL_actions", "", obj, "action_list", obj, "elrig_active_action_index")
             
             row = layout.row()
             row.operator("elrig.add_action", text="Add Current Action")
@@ -91,8 +74,9 @@ class VIEW_3D_UI_Elements(bpy.types.Panel):
         
         layout.label(text="Export Directory: " + folder_directory)
         layout.separator()
-        layout.prop(my_tool, "SetFileName")
         layout.operator("elrig.set_file_path", text="Set File Path")
+        layout.separator()
+        layout.prop(export_tool, "SetFileName")
         layout.separator()
         
         layout.separator()
@@ -101,9 +85,11 @@ class VIEW_3D_UI_Elements(bpy.types.Panel):
         layout.prop(scene, "clear_all_nla_tracks")
         layout.separator()
         layout.operator("elrig.export_rig", text="Export Rig") 
+        layout.separator()
+        #layout.operator("elrig.push_to_nla", text="Push to NLA")
         
 # UIList
-class ACTION__UI_UL_actions(bpy.types.UIList):
+class ACTION__UI_UL_actions(UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             if item.action:
@@ -113,7 +99,7 @@ class ACTION__UI_UL_actions(bpy.types.UIList):
             
             # Find the index of the item
             index = -1
-            for i, list_item in enumerate(data.elrig_actions):
+            for i, list_item in enumerate(data.action_list):
                 if list_item == item:
                     index = i
                     break
@@ -135,7 +121,7 @@ class ACTION__UI_UL_actions(bpy.types.UIList):
                 layout.label(text="No Action", icon='ERROR')
             
 # Operator to add the current action to the list
-class AddActionOperator(bpy.types.Operator):
+class AddActionOperator(Operator):
     bl_idname = "elrig.add_action"
     bl_label = "Add Current Action"
     #bl_info = "Add the current action to the list of actions"
@@ -145,16 +131,16 @@ class AddActionOperator(bpy.types.Operator):
         obj = context.object
         if obj.animation_data and obj.animation_data.action:
             action = obj.animation_data.action
-            item = obj.elrig_actions.add()
+            item = obj.action_list.add()
             item.action = action
-            obj.elrig_active_action_index = len(obj.elrig_actions) - 1
+            obj.elrig_active_action_index = len(obj.action_list) - 1
             self.report({'INFO'}, f"Added action: {action.name}")
         else:
             self.report({'WARNING'}, "No current action to add.")
         return {'FINISHED'}
 
 # Operator to remove an action from the list
-class RemoveActionOperator(bpy.types.Operator):
+class RemoveActionOperator(Operator):
     bl_idname = "elrig.remove_action"
     bl_label = "Remove Action"
     
@@ -162,15 +148,15 @@ class RemoveActionOperator(bpy.types.Operator):
 
     def execute(self, context):
         obj = context.object
-        if 0 <= self.index < len(obj.elrig_actions):
-            obj.elrig_actions.remove(self.index)
+        if 0 <= self.index < len(obj.action_list):
+            obj.action_list.remove(self.index)
             self.report({'INFO'}, "Removed action from list.")
         else:
             self.report({'WARNING'}, "Invalid index.")
         return {'FINISHED'}
     
     # Operator to set an action as the active one
-class SetActiveActionOperator(bpy.types.Operator):
+class CUSTOM_OT_SetActiveAction(Operator):
     bl_idname = "elrig.set_active_action"
     bl_label = "Set Active Action"
     bl_description = "Set the selected action as the active action"
@@ -191,7 +177,7 @@ class SetActiveActionOperator(bpy.types.Operator):
 
 #### Operators for Exporting Rig ####
 
-class Custom_OT_SetFilePath(bpy.types.Operator):
+class Custom_OT_SetFilePath(Operator):
     bl_idname = "elrig.set_file_path"
     bl_label = "Set File Path"
     bl_description = "Opens Blender File View. Select the directory to export to"
@@ -208,18 +194,25 @@ class Custom_OT_SetFilePath(bpy.types.Operator):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
     
-class CUSTOM_OT_ExportRigOperator(bpy.types.Operator):
+class CUSTOM_OT_ExportRigOperator(Operator):
     bl_idname = "elrig.export_rig"
     bl_label = "Export Rig as FBX"
     bl_description = "Export the selected armature and its actions as an FBX file. Select the armature; any parented and visible items will also be exported"
 
     def execute(self, context):
 
-        actions = export_functions.prep_export_push_NLA() #DEBUG
+        
+        pushed_actions = exportFunctions.prep_export_push_NLA()
 
-        export_functions.prep_export_push_NLA()
+        #for action in pushed_actions:
+        #    print(action.name)
+       
 
-        print(f"Exported actions: {[action.name for action in actions]}")
+        #print(f"Pushed actions: {[action.name for action in pushed_actions]}")
+
+        #exportFunctions.push_actions_to_nla(bpy.context.active_object, pushed_actions)
+
+        #print(f"Exported actions: {[action.name for action in actions]}")
         
         custom_filename = bpy.context.scene.my_tool.SetFileName
         export_filename = f"{custom_filename}.fbx"
@@ -239,72 +232,27 @@ class CUSTOM_OT_ExportRigOperator(bpy.types.Operator):
                 if obj.parent == selected_armature:
                     obj.select_set(True)
                     selected_armature.select_set(True)
-                    Action_List_Helper.set_export_scene_params(export_filepath)
+                    #exportFunctions.set_export_scene_params(export_filepath)
                     
+        exportFunctions.set_export_scene_params(export_filepath)
+        clear_added = context.scene.clear_nla_tracks
+        clear_all = context.scene.clear_all_nla_tracks
 
+        if clear_added:
+            exportFunctions.clear_added_nla_tracks(selected_armature, pushed_actions)
+        if clear_all:
+            Action_List_Helper.clear_all_nla_tracks(selected_armature)
+           # exportFunctions.delete_nla_tracks(selected_armature)
         print(f"exported {selected_armature.name} to {export_filepath}")
+       
         
-        export_nla_cleanup = False
-
-        if self.clear_nla_tracks:
-            if self.clear_all_nla_tracks:
-                Action_List_Helper.clear_all_nla_tracks()
-            elif self.clear_nla_tracks:
-                export_functions.export_with_nla_cleanup(export_filepath, selected_armature) # Refactor to only remove the NLA tracks that were added by the script
-        else:
-            return {'FINISHED'}
-
-       #for track in bpy.context.object.animation_data.nla_tracks:
-       #    for strip in track.strips:
-       #        bpy.context.object.animation_data.nla_tracks.remove(track)
-       #        break            
-        
-        
-
-
-
-# Register and Unregister Functions
-classes = [ElRigActionItem, 
-           VIEW_3D_UI_Elements, 
-           ACTION__UI_UL_actions, 
-           AddActionOperator, 
-           RemoveActionOperator, 
-           SetActiveActionOperator,
-           Custom_OT_SetFilePath,
-           CUSTOM_OT_ExportRigOperator,
-           ExportProperties,
-           BoolProperties,           
-           ]
-
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
+        return {'FINISHED'}
     
-    bpy.types.Object.elrig_active_action_index = IntProperty()
-    bpy.types.Object.elrig_actions = CollectionProperty(type=ElRigActionItem)
-    bpy.types.Scene.my_tool = PointerProperty(type=ExportProperties)
-    bpy.types.Scene.clear_nla_tracks = BoolProperty(
-        name="Clear NLA Tracks",
-        description="Clear NLA tracks after export. If neither is selected, the NLA tracks will be kept",
-        default=True
-    )
-    bpy.types.Scene.clear_all_nla_tracks = BoolProperty(
-        name="Clear All NLA Tracks",
-        description="Clear all NLA tracks after export. If neither is selected, the NLA tracks will be kept",
-        default=False
-    )
 
 
+# DEBUG
 
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
-    
-    del bpy.types.Object.elrig_active_action_index
-    del bpy.types.Object.elrig_actions
-    del bpy.types.Scene.my_tool
-    del bpy.types.Scene.clear_nla_tracks
-    del bpy.types.Scene.clear_all_nla_tracks
 
-if __name__ == "__main__":
-    register()
+        
+
+

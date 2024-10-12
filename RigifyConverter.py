@@ -24,7 +24,7 @@ bl_info = {
     "version": (1, 0, 1),
     "author": "Elric Steelsword",
     "location": "View3D tools panel (N-panel) -> ElRig",
-    "description": "Game rig conversion for Rigify, UI Exporting for Unity and various tools. "
+    "description": "NOTE: DEV version. Game rig conversion for Rigify, UI Exporting for Unity and various tools. "
     "To Export an armature, add your actions to the list, then click Export Rig.",
 }
 
@@ -40,6 +40,7 @@ class OBJECT_OT_ConvertToGameRig(Operator):
     bl_label = "Convert to Game Rig"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Convert any Rigify rig to Game Rig"
+    bl_order = 11
 
     def execute(self, context):
         main(self)  # Call your main logic here
@@ -52,6 +53,7 @@ class VIEW3D_PT_RigifyGameConverter(Panel):
     bl_label = "Rigify GameRig Converter"
     bl_idname = "VIEW3D_PT_rigify_game_converter"
     bl_category = 'ElRig'
+    bl_order = 10
 
     @classmethod
     def poll(cls, context):
@@ -153,33 +155,24 @@ def work_on_proxy_rig():
         # these bones have no prefix
         #we will add a DEF- prefix to them
         if not bone.name.startswith("DEF-"):
-            bone.name = "DEF-" + bone.name
+            bone.name = "DEF-" + bone.name  #TODO Remember to uncomment this line
             print(f"Renamed bone {bone.name}")
 
     
 
-    print ("hide metarig collections was called and passed") 
     # Deselect all bones
     bpy.ops.pose.select_all(action='DESELECT')
 
     shall_cut = bpy.context.scene.split_bones_prop
 
-    if shall_cut:
+    if shall_cut:        
+        #Select all bones
         if bpy.context.object.mode != 'EDIT':
             bpy.ops.object.mode_set(mode='EDIT')
-        #Select all bones
         bpy.ops.armature.select_all(action='DESELECT')
         hide_metarig_collections()
         bpy.ops.armature.select_all(action='SELECT')
-        split_bones()
-
-    
-
-
-    # show all collections
-    for collection in bpy.context.object.data.collections:
-        collection.is_visible = True
-    
+        split_bones()   
 
     if bpy.context.object.mode != 'OBJECT':
         bpy.ops.object.mode_set(mode='OBJECT')    
@@ -281,7 +274,7 @@ def set_constraints(self):
     # Check if the active object is the correct armature
     if armature.name != "rig":
         self.report = {'ERROR'}, "Failed to constrain bones. The active object is not the correct rig."
-        print("Failed to constrain bones. The active object is not the correct rig.")
+        #print("Failed to constrain bones. The active object is not the correct rig.")
         return
 
     # Select all visible bones in pose mode
@@ -347,45 +340,64 @@ def set_constraints(self):
 
     # Deselect all bones
     bpy.ops.pose.select_all(action='DESELECT')
-    # Deselect all bones
-    bpy.ops.pose.select_all(action='DESELECT')
+    
 
 def split_bones():
     
-           
-    armature = bpy.context.active_object
+
+    # Ensure we are in EDIT mode to work on bones
     if bpy.context.object.mode != 'EDIT':
-        bpy.ops.object.mode_set(mode='EDIT')    
-    # Deselect all bones
-    bpy.ops.armature.select_all(action='DESELECT')    
-    split_bones_set = set()        
-    # Split the bones
+        bpy.ops.object.mode_set(mode='EDIT')
+    # Get the armature object
+    armature = bpy.context.object
+
+
+    bones_to_ignore = ["foot", "toe", "hand", "paw",]
     for bone in armature.data.edit_bones:
-        # Skip foot and toe bones
-        if "foot" in bone.name or "toe" in bone.name:
-            print(f"Skipping bone: {bone.name}")
-            continue
-        bpy.ops.armature.select_all(action='SELECT')
-        if bone.select and bone.name not in split_bones_set:
-            # Deselect all bones first
-            bpy.ops.armature.select_all(action='DESELECT')
-            # Select the bone to be split
+        if any(ignored in bone.name.lower() for ignored in bones_to_ignore):
+            bone.select = False
+        else:
             bone.select = True
-            bone.select_head = True
-            bone.select_tail = True
-            # Subdivide the bone            
-            bpy.ops.armature.subdivide(number_cuts=1)
-            print(f"Split bone: {bone.name}")
-            # Add the original bone and the new bone to the set
-            split_bones_set.add(bone.name)
-            for new_bone in armature.data.edit_bones:
-                if new_bone.name.startswith(bone.name):
-                    split_bones_set.add(new_bone.name)
+
+    initial_bones = [bone for bone in armature.data.edit_bones if bone.select]
+    print(f"Selected bones: {[bone.name for bone in initial_bones]}")
+
+    if not initial_bones:
+        print("No valid bones to process.")
+        return
+
+    # Step 2: Prepare a set to keep track of split bones (original and newly created)
+    split_bones_set = set()
+
+    # Step 3: Iterate through each bone and split it
+    for bone in initial_bones:
+    # Step 4: Skip if the bone has already been split
+        if bone.name in split_bones_set:
+            continue     
+
+        # Select the bone to be split
+        armature.data.edit_bones.active = bone
+        bone.select = True
+
+        
+        bpy.ops.armature.subdivide(number_cuts=1)       
+
+        # Get the new bones after subdivision (bones not in split_bones_set)
+        new_bones = [b.name for b in armature.data.edit_bones if b.name not in split_bones_set]
+        print(f"New bones: {new_bones}")
+        # Mark the original and new bones as split
+        split_bones_set.add(bone.name)
+        split_bones_set.update(new_bones)
+
+        # Deselect the bone after processing
+        bone.select = False
+
 
             
 
 def hide_metarig_collections():
 
+    
     print ("Hiding metarig collections")    
     armature = bpy.context.object
     collections = armature.data.collections
@@ -394,12 +406,16 @@ def hide_metarig_collections():
             collection.is_visible = False
         else:
             collection.is_visible = True
+    print ("hide metarig collections was called and passed") 
 
 
 def create_collection(armature_name, collection_name):
     armature = bpy.data.objects.get(armature_name)
     if collection_name not in armature.data.collections:
         new_bone_collection = armature.data.collections.new(collection_name)
+        print(f"Created new collection: {collection_name}")
+    else:
+        return
     return new_bone_collection
 
 def move_bones_to_collection(armature_name = "rig", collection_name="NEW_DEF_BONES", bone_prefix="deprecated-"):
@@ -523,35 +539,3 @@ name="Delete Root",
 description="If you want to remove the separate root bone, check this box",
 default=False
 ) # type: ignore
-
-    
-
-classes = [OBJECT_OT_ConvertToGameRig, VIEW3D_PT_RigifyGameConverter]
-
-
-def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
-    
-    bpy.types.Scene.split_bones_prop = BoolProperty(
-            name="Split Bones",
-            description="Enable splitting of bones",
-            default=True
-        )
-    bpy.types.Scene.delete_root = BoolProperty(
-            name="Delete Root",
-            description="If you want to remove the separate root bone, check this box",
-            default=False
-        )
-
-    
-
-def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
-
-    del bpy.types.Scene.split_bones_prop
-    del bpy.types.Scene.delete_root
-
-if __name__ == "__main__":
-    register()

@@ -21,59 +21,85 @@ bl_info = {
     "name": "ElRig",
     "blender": (4, 2, 0),
     "category": "Rigging",
-    "version": (1, 0, 1),
+    "version": (1, 0, 3),
     "author": "Elric Steelsword",
     "location": "View3D tools panel (N-panel) -> ElRig",
     "description": "Game rig conversion for Rigify, UI Exporting for Unity and various tools. "
     "To Export an armature, add your actions to the list, then click Export Rig.",
 }
 
-import sys
-import os
 import bpy
-
-home_dir = os.path.expanduser("~")
-
-# Construct the path to the Blender addons directory
-blender_addons_path = os.path.join(home_dir, "AppData", "Roaming", "Blender Foundation", "Blender", "4.2", "scripts", "addons", "Elrig")
-
-# Add the constructed path to sys.path if it's not already there
-if blender_addons_path not in sys.path:
-    sys.path.append(blender_addons_path)
-
-#path_with_forward_slashes = os.path.replace("\\", "/")
-#module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "D:/Blender_Projects/Addons/Scripting/ElRig/Blender_Addons"))
-#if module_path not in sys.path:
-#    sys.path.append(module_path)
+from bpy.props import IntProperty, CollectionProperty, PointerProperty, StringProperty, BoolProperty
+from . import RigifyConverter, Exporter
 
 
-from .export_functions import register as register_export_actions, unregister as unregister_export_actions
-from .ExportUI import register as register_export_ui, unregister as unregister_export_ui
-from .convert_rig import register as register_convert_rig, unregister as unregister_convert_rig
-#from .helper_functions import helper_functions
-from .helper_functions import register as register_helper_functions, unregister as unregister_helper_functions
-from .auto_FK_IK_switch import register as register_auto_FK_IK_switch, unregister as unregister_auto_FK_IK_switch
+classes = [RigifyConverter.OBJECT_OT_ConvertToGameRig, RigifyConverter.VIEW3D_PT_RigifyGameConverter,
+            Exporter.VIEW_3D_UI_Elements,  Exporter.ACTION__UI_UL_actions, 
+            Exporter.AddActionOperator, Exporter.RemoveActionOperator, Exporter.CUSTOM_OT_SetActiveAction,
+            Exporter.Custom_OT_SetFilePath, Exporter.CUSTOM_OT_ExportRigOperator, Exporter.ElRigActionItem, Exporter.ExportProperties,
+            ]
 
-#from . import helper_functions
-#from .simple_auto_switch import register as register_simple_auto_switch, unregister as unregister_simple_auto_switch
 
-### REGISTER ###
+
 
 def register():
-    register_export_actions()
-    register_export_ui()
-    register_convert_rig()
-    register_auto_FK_IK_switch()
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    
+    #Converter props
+    
+    bpy.types.Scene.split_bones_prop = BoolProperty(
+            name="Split Bones",
+            description="Enable splitting of bones",
+            default=True
+        )
+    bpy.types.Scene.delete_root = BoolProperty(
+            name="Delete Root",
+            description="If you want to remove the separate root bone, check this box",
+            default=False
+        )
+    
+    #Exporter props
+    bpy.types.Object.elrig_active_action_index = IntProperty()
+    bpy.types.Object.action_list = CollectionProperty(type=Exporter.ElRigActionItem)
+    bpy.types.Scene.my_tool = PointerProperty(type=Exporter.ExportProperties)
+    bpy.types.Scene.clear_nla_tracks = BoolProperty(
+        name="Clear NLA Tracks",
+        description="Clear NLA tracks after export. If neither is selected, the NLA tracks will be kept",
+        default=True
+    )
+    bpy.types.Scene.clear_all_nla_tracks = BoolProperty(
+        name="Clear All NLA Tracks",
+        description="Clear all NLA tracks after export. If neither is selected, the NLA tracks will be kept",
+        default=False
+    )
+
     
 
+    
 
 def unregister():
-    unregister_export_actions()
-    unregister_export_ui()
-    unregister_convert_rig()
-    unregister_auto_FK_IK_switch()
-    
-    
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+
+    #Converter props
+    del bpy.types.Scene.split_bones_prop
+    del bpy.types.Scene.delete_root
+
+    #Exporter props
+    del bpy.types.Object.elrig_active_action_index
+    del bpy.types.Object.action_list
+    del bpy.types.Scene.my_tool
+    del bpy.types.Scene.clear_nla_tracks
+    del bpy.types.Scene.clear_all_nla_tracks
+
+
+
+if __name__ == "__main__":
+    register()
+    Exporter.register
+
 
     
-   
+    
+    
