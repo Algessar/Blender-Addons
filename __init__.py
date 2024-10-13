@@ -36,7 +36,9 @@ from . import RigifyConverter, Exporter
 classes = [RigifyConverter.OBJECT_OT_ConvertToGameRig, RigifyConverter.VIEW3D_PT_RigifyGameConverter,
             Exporter.VIEW_3D_UI_Elements,  Exporter.ACTION__UI_UL_actions, 
             Exporter.AddActionOperator, Exporter.RemoveActionOperator, Exporter.CUSTOM_OT_SetActiveAction,
-            Exporter.Custom_OT_SetFilePath, Exporter.CUSTOM_OT_ExportRigOperator, Exporter.ElRigActionItem, Exporter.ExportProperties,
+            Exporter.Custom_OT_SetFilePath, Exporter.CUSTOM_OT_ExportRigOperator, 
+            Exporter.ElRigActionItem, Exporter.ExportProperties,
+            Exporter.CUSTOM_OT_MoveActionDown, Exporter.CUSTOM_OT_MoveActionUp,           
             ]
 
 

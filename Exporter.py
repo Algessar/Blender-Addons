@@ -60,14 +60,20 @@ class VIEW_3D_UI_Elements(Panel):
         #clear_nla_tracks = scene.clear_nla_tracks
 
         if obj is not None:
-            row = layout.row()
-            row.template_list("ACTION__UI_UL_actions", "", obj, "action_list", obj, "elrig_active_action_index")
+            
+            layout = self.layout
+            row  = layout.row()
+            row.template_list("ACTION__UI_UL_actions", "", obj, "action_list", obj, "elrig_active_action_index") 
+                        
+            col = row.column(align=True)            
+            col.operator("elrig.move_action_up", icon='TRIA_UP', text="")            
+            col.operator("elrig.move_action_down", icon='TRIA_DOWN', text="") 
             
             row = layout.row()
             row.operator("elrig.add_action", text="Add Current Action")
-        else:    
+        else:
             box = layout.box()
-            box.label(text="No object selected")      
+            box.label(text="No object selected")    
         
         folder_directory = export_dir       
        
@@ -78,16 +84,15 @@ class VIEW_3D_UI_Elements(Panel):
         layout.separator()
         layout.prop(export_tool, "SetFileName")
         layout.separator()
-        
+
         layout.separator()
         layout.label(text="Export Cleanup Options:")
         layout.prop(scene, "clear_nla_tracks")
         layout.prop(scene, "clear_all_nla_tracks")
         layout.separator()
-        layout.operator("elrig.export_rig", text="Export Rig") 
-        layout.separator()
-        #layout.operator("elrig.push_to_nla", text="Push to NLA")
-        
+        layout.operator("elrig.export_rig", text="Export Rig")
+
+
 # UIList
 class ACTION__UI_UL_actions(UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
@@ -112,7 +117,8 @@ class ACTION__UI_UL_actions(UIList):
             is_active = context.object.animation_data and context.object.animation_data.action == item.action
             icon = 'CHECKMARK' if is_active else 'BLANK1'
             op = row.operator("elrig.set_active_action", text="", icon=icon) 
-            op.action_name = item.action.name if item.action else ""
+            op.action_name = item.action.name if item.action else ""            
+
         elif self.layout_type == 'GRID':
             layout.alignment = 'CENTER'
             if item.action:
@@ -173,6 +179,42 @@ class CUSTOM_OT_SetActiveAction(Operator):
             self.report({'INFO'}, f"Set active action: {action.name}")
         else:
             self.report({'WARNING'}, "Action not found.")
+        return {'FINISHED'}
+    
+class CUSTOM_OT_MoveActionUp(Operator):
+    bl_idname = "elrig.move_action_up"
+    bl_label = "Move Action Up"
+    #bl_description = "Move the selected action up in the list"
+    
+    index: IntProperty() # type: ignore
+
+    def execute(self, context):
+        obj = context.object
+        index = obj.elrig_active_action_index
+        if index > 0:
+            obj.action_list.move(index, index - 1)
+            obj.elrig_active_action_index -= 1
+            self.report({'INFO'}, "Moved action up.")
+        else:
+            self.report({'WARNING'}, "Action already at the top.")
+        return {'FINISHED'}
+    
+class CUSTOM_OT_MoveActionDown(Operator):
+    bl_idname = "elrig.move_action_down"
+    bl_label = "Move Action Down"
+    #bl_description = "Move the selected action down in the list"
+    
+    index: IntProperty() # type: ignore 
+
+    def execute(self, context):
+        obj = context.object
+        index = obj.elrig_active_action_index
+        if index < len(obj.action_list) - 1:
+            obj.action_list.move(index, index + 1)
+            obj.elrig_active_action_index += 1
+            #self.report({'INFO'}, "Moved action down.")
+        else:
+            self.report({'WARNING'}, "Action already at the bottom.")
         return {'FINISHED'}
 
 #### Operators for Exporting Rig ####

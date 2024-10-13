@@ -1,4 +1,5 @@
 from .helpers import Action_List_Helper
+from concurrent.futures import ThreadPoolExecutor
 import bpy
 
 
@@ -23,6 +24,29 @@ def push_actions_to_nla(obj, actions):
         strip = action_list_helper.push_to_nla(index)  # Push to NLA using index
         if strip:
             added_tracks.append(strip)
+    print(f"Pushed actions to NLA: {[action.name for action in actions]}")
+    return added_tracks
+
+def push_actions_to_nla_parallel(obj, actions):
+    added_tracks = []
+    action_list_helper = Action_List_Helper(obj)
+    nla_tracks = obj.animation_data.nla_tracks  # Cache nla_tracks
+
+    def process_action(index, action):
+        if not isinstance(action, bpy.types.Action):
+            print(f"Error: Expected an Action type, but got {type(action)} at index {index}")
+            return None
+
+        action_list_helper.set_actual_action(action)  # Set the current action
+        return action_list_helper.push_to_nla(index)  # Push to NLA using index
+
+    with ThreadPoolExecutor() as executor:
+        results = executor.map(process_action, range(len(actions)), actions)
+
+    for strip in results:
+        if strip:
+            added_tracks.append(strip)
+
     print(f"Pushed actions to NLA: {[action.name for action in actions]}")
     return added_tracks
 
@@ -85,7 +109,8 @@ def prep_export_push_NLA():
         print("ExportFunctions: No actions found for the selected object.")
         return
 
-    push_actions_to_nla(obj, actions)
+    #push_actions_to_nla(obj, actions)
+    push_actions_to_nla_parallel(obj, actions)
     mute_nla_tracks()
     print(f"Exported actions: {[action.name for action in actions]}")
     return actions
