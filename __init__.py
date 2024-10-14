@@ -66,7 +66,7 @@ def register():
     #Exporter props
     bpy.types.Object.elrig_active_action_index = IntProperty()
     bpy.types.Object.action_list = CollectionProperty(type=Exporter.ElRigActionItem)
-    bpy.types.Scene.my_tool = PointerProperty(type=Exporter.ExportProperties)
+    bpy.types.Scene.export_props = PointerProperty(type=Exporter.ExportProperties)
     bpy.types.Scene.clear_nla_tracks = BoolProperty(
         name="Clear NLA Tracks",
         description="Clear NLA tracks after export. If neither is selected, the NLA tracks will be kept",
@@ -84,6 +84,8 @@ def register():
 
     
 
+    
+
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
@@ -95,7 +97,7 @@ def unregister():
     #Exporter props
     del bpy.types.Object.elrig_active_action_index
     del bpy.types.Object.action_list
-    del bpy.types.Scene.my_tool
+    del bpy.types.Scene.export_props
     del bpy.types.Scene.clear_nla_tracks
     del bpy.types.Scene.clear_all_nla_tracks
 

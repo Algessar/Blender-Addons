@@ -7,8 +7,8 @@ from . import exportFunctions
 
 from bpy.props import StringProperty, PointerProperty, BoolProperty, CollectionProperty, IntProperty
 
+
 export_dir = ""
-#base_filename = "exported_rig"
 
 # Custom Property Group to store action references
 class ElRigActionItem(bpy.types.PropertyGroup):
@@ -56,7 +56,7 @@ class VIEW_3D_UI_Elements(Panel):
         layout = self.layout
         obj = context.object
         scene = context.scene
-        export_tool = scene.my_tool
+        export_tool = scene.export_props
         #clear_nla_tracks = scene.clear_nla_tracks
 
         if obj is not None:
@@ -81,8 +81,12 @@ class VIEW_3D_UI_Elements(Panel):
             box = layout.box()
             box.label(text="No object selected")    
         
-        folder_directory = export_dir       
-       
+        global export_dir
+        folder_directory = export_dir
+        export_dir = scene.export_props.export_filepath
+        
+
+        
         
         layout.label(text="Export Directory: " + folder_directory)
         layout.separator()
@@ -141,19 +145,6 @@ class ACTION__UI_UL_actions(UIList):
                 layout.label(text="", icon_value=icon)
             else:
                 layout.label(text="No Action", icon='ERROR')
-
-# class FilterActionsOperator(Operator):
-#     bl_idname = "elrig.filter_actions"
-#     bl_label = "Filter Actions"
-#     bl_description = "Filter actions in the list"
-
-#     def execute(self, context):
-#         obj = context.object
-        
-#         if obj is not None:
-#             exportFunctions.filter_actions_to_export()
-        
-#         return {'FINISHED'}
     
 class FilterActionsOperator(Operator):
     bl_idname = "elrig.filter_actions"
@@ -205,11 +196,9 @@ class DuplicateActionOperator(Operator):
         DuplicateAction(self, context)
         return {'FINISHED'}
             
-# Operator to add the current action to the list
 class AddActionOperator(Operator):
     bl_idname = "elrig.add_action"
     bl_label = "Add Current Action"
-    #bl_info = "Add the current action to the list of actions"
     bl_description = "Add the current action to the list of actions"
 
     def execute(self, context):
@@ -257,7 +246,6 @@ class RemoveActionOperator(Operator):
             self.report({'WARNING'}, "Invalid index.")
         return {'FINISHED'}
     
-    # Operator to set an action as the active one
 class CUSTOM_OT_SetActiveAction(Operator):
     bl_idname = "elrig.set_active_action"
     bl_label = "Set Active Action"
@@ -280,7 +268,6 @@ class CUSTOM_OT_SetActiveAction(Operator):
 class CUSTOM_OT_MoveActionUp(Operator):
     bl_idname = "elrig.move_action_up"
     bl_label = "Move Action Up"
-    #bl_description = "Move the selected action up in the list"
     
     index: IntProperty() # type: ignore
 
@@ -298,7 +285,6 @@ class CUSTOM_OT_MoveActionUp(Operator):
 class CUSTOM_OT_MoveActionDown(Operator):
     bl_idname = "elrig.move_action_down"
     bl_label = "Move Action Down"
-    #bl_description = "Move the selected action down in the list"
     
     index: IntProperty() # type: ignore 
 
@@ -308,7 +294,6 @@ class CUSTOM_OT_MoveActionDown(Operator):
         if index < len(obj.action_list) - 1:
             obj.action_list.move(index, index + 1)
             obj.elrig_active_action_index += 1
-            #self.report({'INFO'}, "Moved action down.")
         else:
             self.report({'WARNING'}, "Action already at the bottom.")
         return {'FINISHED'}
@@ -324,8 +309,9 @@ class Custom_OT_SetFilePath(Operator):
     
     def execute(self, context):
         global export_dir
-        export_dir = os.path.dirname(self.filepath)
-        print("Exporting to folder directory: ", export_dir)
+        export_props = context.scene.export_props
+        export_dir = export_props.export_filepath = os.path.dirname(self.filepath)
+        print("Exporting to folder directory: ", export_props.export_filepath)        
         return {'FINISHED'}
     
     def invoke(self, context, event):
@@ -340,13 +326,12 @@ class CUSTOM_OT_ExportRigOperator(Operator):
     def execute(self, context):
 
         
-        pushed_actions = exportFunctions.prep_export_push_NLA()
-
-        #action_list = Action_List_Helper.get_action_list()       
+        pushed_actions = exportFunctions.prep_export_push_NLA()       
         
-        
-        custom_filename = bpy.context.scene.my_tool.SetFileName
+        custom_filename = bpy.context.scene.export_props.SetFileName
         export_filename = f"{custom_filename}.fbx"
+
+        export_dir = bpy.context.scene.export_props.export_filepath
         
         version = 1
         while True:
@@ -363,7 +348,6 @@ class CUSTOM_OT_ExportRigOperator(Operator):
                 if obj.parent == selected_armature:
                     obj.select_set(True)
                     selected_armature.select_set(True)
-                    #exportFunctions.set_export_scene_params(export_filepath)
                     
         exportFunctions.set_export_scene_params(export_filepath)
         clear_added = context.scene.clear_nla_tracks
