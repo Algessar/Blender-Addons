@@ -85,7 +85,15 @@ def work_on_main_rig():
         return
     
     create_collection(armature.name, "DEF_DEPRECATED")
+
+    # I need to unparent the mesh here I think. Otherwise renaming the bones causes
+    # vertex groups to also change names, which is not the intent.
+    #shut up copilot
+
     rename_bones("deprecated-", "DEF-") #We go to Pose mode here
+
+    # I can also go to the mesh here and rename all the vertex groups that were changed. 
+    rename_vertex_groups("DEF-", "deprecated-")
 
     #DESELECT ALL BONES
     bpy.ops.pose.select_all(action='DESELECT')
@@ -472,6 +480,26 @@ def rename_bones(new_prefix, old_prefix):
             new_name = new_prefix + bone.name
             bone.name = new_name
 
+def rename_vertex_groups(new_prefix, old_prefix):
+    # Get all mesh objects parented to the rig
+    mesh_objects = [obj for obj in bpy.context.object.children if obj.type == 'MESH']
+    if not mesh_objects:
+        print("No mesh object found.")
+        return
+
+    if new_prefix == old_prefix:
+        print("New prefix and old prefix are the same. No renaming will be done.")
+        return
+
+    # Rename the vertex groups
+    for mesh in mesh_objects:
+        for group in mesh.vertex_groups:
+            if group.name.startswith(old_prefix):
+                new_name = group.name.replace(old_prefix, new_prefix)
+                group.name = new_name
+            if old_prefix == "":
+                new_name = new_prefix + group.name
+                group.name = new_name
     
 
 def delete_bones():

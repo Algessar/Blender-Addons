@@ -25,7 +25,7 @@ bl_info = {
     "author": "Elric Steelsword",
     "location": "View3D tools panel (N-panel) -> ElRig",
     "description": "Game rig conversion for Rigify, UI Exporting for Unity and various tools. "
-    "To Export an armature, add your actions to the list, then click Export Rig.",
+    "To Export an armature, add your actions to the list, then click Export Rig. Boop!",
 }
 
 import bpy
