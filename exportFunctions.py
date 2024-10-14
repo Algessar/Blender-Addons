@@ -12,43 +12,7 @@ def get_actions_from_object(obj):
     action_list_helper = Action_List_Helper(obj)
     return action_list_helper.get_actual_action()
 
-def push_actions_to_nla(obj, actions):
-    added_tracks = []
-    action_list_helper = Action_List_Helper(obj)
-    for index, action in enumerate(actions):
-        if not isinstance(action, bpy.types.Action):
-            print(f"Error: Expected an Action type, but got {type(action)} at index {index}")
-            continue
 
-        action_list_helper.set_actual_action(action)  # Set the current action
-        strip = action_list_helper.push_to_nla(index)  # Push to NLA using index
-        if strip:
-            added_tracks.append(strip)
-    print(f"Pushed actions to NLA: {[action.name for action in actions]}")
-    return added_tracks
-
-def push_actions_to_nla_parallel(obj, actions):
-    added_tracks = []
-    action_list_helper = Action_List_Helper(obj)
-    nla_tracks = obj.animation_data.nla_tracks  # Cache nla_tracks
-
-    def process_action(index, action):
-        if not isinstance(action, bpy.types.Action):
-            print(f"Error: Expected an Action type, but got {type(action)} at index {index}")
-            return None
-
-        action_list_helper.set_actual_action(action)  # Set the current action
-        return action_list_helper.push_to_nla(index)  # Push to NLA using index
-
-    with ThreadPoolExecutor() as executor:
-        results = executor.map(process_action, range(len(actions)), actions)
-
-    for strip in results:
-        if strip:
-            added_tracks.append(strip)
-
-    print(f"Pushed actions to NLA: {[action.name for action in actions]}")
-    return added_tracks
 
 def get_nla_tracks_by_action(obj, action):
     """
@@ -88,15 +52,51 @@ def clear_added_nla_tracks(obj, added_tracks=None):
         nla_tracks.clear()  # Clear all NLA tracks
         print(f"Removed all NLA tracks from {obj.name}.")
 
-def export_with_nla_cleanup(obj, export_filepath):
+# def export_with_nla_cleanup(obj, export_filepath):
 
-    actions = obj.animation_data.nla_tracks if obj.animation_data else []
+#     actions = obj.animation_data.nla_tracks if obj.animation_data else []
 
-    added_tracks = push_actions_to_nla(obj, actions)
-    set_export_scene_params(export_filepath)
-    clear_added_nla_tracks(obj, added_tracks)
+#     added_tracks = push_actions_to_nla(obj, actions)
+#     set_export_scene_params(export_filepath)
+#     clear_added_nla_tracks(obj, added_tracks)
 
-    
+def push_actions_to_nla(obj, actions):
+    added_tracks = []
+    action_list_helper = Action_List_Helper(obj)
+    for index, action in enumerate(actions):
+        if not isinstance(action, bpy.types.Action):
+            print(f"Error: Expected an Action type, but got {type(action)} at index {index}")
+            continue
+
+        action_list_helper.set_actual_action(action)  # Set the current action
+        strip = action_list_helper.push_to_nla(index)  # Push to NLA using index
+        if strip:
+            added_tracks.append(strip)
+    print(f"Pushed actions to NLA: {[action.name for action in actions]}")
+    return added_tracks
+
+def push_actions_to_nla_parallel(obj, actions):
+    added_tracks = []
+    action_list_helper = Action_List_Helper(obj)
+    nla_tracks = obj.animation_data.nla_tracks  # Cache nla_tracks
+
+    def process_action(index, action):
+        if not isinstance(action, bpy.types.Action):
+            print(f"Error: Expected an Action type, but got {type(action)} at index {index}")
+            return None
+
+        action_list_helper.set_actual_action(action)  # Set the current action
+        return action_list_helper.push_to_nla(index)  # Push to NLA using index
+
+    with ThreadPoolExecutor() as executor:
+        results = executor.map(process_action, range(len(actions)), actions)
+
+    for strip in results:
+        if strip:
+            added_tracks.append(strip)
+
+    print(f"Pushed actions to NLA: {[action.name for action in actions]}")
+    return added_tracks
 
 def prep_export_push_NLA():
     obj = bpy.context.active_object
@@ -104,7 +104,7 @@ def prep_export_push_NLA():
         print("No active object selected.")
         return
 
-    actions = get_actions_from_ui_list(obj)
+    actions = filter_actions_to_export(obj)
     if not actions:
         print("ExportFunctions: No actions found for the selected object.")
         return
@@ -192,3 +192,19 @@ def mute_nla_tracks():
             track.mute = True
         else:
             track.mute = False
+
+
+def filter_actions_to_export(obj):
+    action_list_helper = Action_List_Helper(obj)
+    action_list = action_list_helper.collect_action_list()
+
+    # Collect starred actions
+    starred_actions = [action for action in action_list if is_starred(action)]
+    
+    # If no actions are starred, return all actions
+    if not starred_actions:
+        return action_list
+    return starred_actions
+
+def is_starred(action):
+    return getattr(action, 'is_starred', False)

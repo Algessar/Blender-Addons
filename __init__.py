@@ -38,7 +38,9 @@ classes = [RigifyConverter.OBJECT_OT_ConvertToGameRig, RigifyConverter.VIEW3D_PT
             Exporter.AddActionOperator, Exporter.RemoveActionOperator, Exporter.CUSTOM_OT_SetActiveAction,
             Exporter.Custom_OT_SetFilePath, Exporter.CUSTOM_OT_ExportRigOperator, 
             Exporter.ElRigActionItem, Exporter.ExportProperties,
-            Exporter.CUSTOM_OT_MoveActionDown, Exporter.CUSTOM_OT_MoveActionUp,           
+            Exporter.CUSTOM_OT_MoveActionDown, Exporter.CUSTOM_OT_MoveActionUp,
+            Exporter.CreateActionOperator, Exporter.DuplicateActionOperator,
+            Exporter.FilterActionsOperator, 
             ]
 
 
@@ -76,6 +78,8 @@ def register():
         default=False
     )
 
+    bpy.types.Action.is_starred = bpy.props.BoolProperty(name="Starred", default=False)
+
     
 
     
@@ -94,6 +98,8 @@ def unregister():
     del bpy.types.Scene.my_tool
     del bpy.types.Scene.clear_nla_tracks
     del bpy.types.Scene.clear_all_nla_tracks
+
+    del bpy.types.Action.is_starred
 
 
 

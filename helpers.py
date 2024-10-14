@@ -41,8 +41,18 @@ class Action_List_Helper:
         #     print("Slot not Found")
 
 
-    #def get_action_list(self):
-    #    return self.obj.action_list
+    def get_nla_tracks_from_list(self, action_list):
+        """
+        Get the NLA track(s) that correspond to the provided action list.
+        """
+        action_list = self.get_action_list()
+        nla_tracks = self.obj.animation_data.nla_tracks
+        corresponding_tracks = []
+
+        # Find the NLA tracks that have strips using this action
+        for track in nla_tracks:
+            corresponding_tracks.append(track)
+            return corresponding_tracks
     
     def get_action_list(self):
         """

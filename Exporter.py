@@ -68,6 +68,12 @@ class VIEW_3D_UI_Elements(Panel):
             col = row.column(align=True)            
             col.operator("elrig.move_action_up", icon='TRIA_UP', text="")            
             col.operator("elrig.move_action_down", icon='TRIA_DOWN', text="") 
+
+            col.separator()
+            col.separator()
+            col.separator()
+            col.operator("elrig.create_action",icon="PLUS", text="")
+            col.operator("elrig.duplicate_action", icon="DUPLICATE", text="")
             
             row = layout.row()
             row.operator("elrig.add_action", text="Add Current Action")
@@ -117,7 +123,17 @@ class ACTION__UI_UL_actions(UIList):
             is_active = context.object.animation_data and context.object.animation_data.action == item.action
             icon = 'CHECKMARK' if is_active else 'BLANK1'
             op = row.operator("elrig.set_active_action", text="", icon=icon) 
-            op.action_name = item.action.name if item.action else ""            
+            op.action_name = item.action.name if item.action else ""
+
+            # Icon for Filtered actions
+            # Add the star icon for "starred" actions
+            row = layout.row(align=True)  # Align the star icon with other operators
+            is_starred = item.action.is_starred if item.action else False
+            star_icon = 'SOLO_ON' if is_starred else 'SOLO_OFF'
+            op = row.operator("elrig.filter_actions", text="", icon=star_icon)
+            op.action_name = item.action.name if item.action else ""           
+        
+        
 
         elif self.layout_type == 'GRID':
             layout.alignment = 'CENTER'
@@ -125,6 +141,69 @@ class ACTION__UI_UL_actions(UIList):
                 layout.label(text="", icon_value=icon)
             else:
                 layout.label(text="No Action", icon='ERROR')
+
+# class FilterActionsOperator(Operator):
+#     bl_idname = "elrig.filter_actions"
+#     bl_label = "Filter Actions"
+#     bl_description = "Filter actions in the list"
+
+#     def execute(self, context):
+#         obj = context.object
+        
+#         if obj is not None:
+#             exportFunctions.filter_actions_to_export()
+        
+#         return {'FINISHED'}
+    
+class FilterActionsOperator(Operator):
+    bl_idname = "elrig.filter_actions"
+    bl_label = "Toggle Star Action"
+    bl_description = "Star or unstar the action"
+
+    action_name: bpy.props.StringProperty() # type: ignore
+
+    def execute(self, context):
+        obj = bpy.context.object
+        if obj and self.action_name:
+            action = bpy.data.actions.get(self.action_name)
+            export_list = exportFunctions.filter_actions_to_export(obj)
+
+            if action:
+                action.is_starred = not action.is_starred  # Toggle the starred status
+                
+                # Add or remove the action from the list
+                if action.is_starred:
+                    self.report({'INFO'}, f"Starred action: {action.name}")
+                    export_list.append(action)
+                    print(f"Action {action.name} was added to list: {export_list}.")
+                else:
+                    export_list.remove(action)
+                    print(f"Action {action.name} was removed from list: {export_list}.")
+            
+            return {'FINISHED'}
+
+class CreateActionOperator(Operator):
+    bl_idname = "elrig.create_action"
+    bl_label = "Create Action"
+    bl_description = "Create a new action for the object"
+
+    def execute(self, context):
+        obj = context.object
+        action = bpy.data.actions.new(name="Action")
+        obj.animation_data_create()
+        obj.animation_data.action = action
+        AddAction(self, context)
+        self.report({'INFO'}, "Created new action.")
+        return {'FINISHED'}
+    
+class DuplicateActionOperator(Operator):
+    bl_idname = "elrig.duplicate_action"
+    bl_label = "Duplicate Action"
+    bl_description = "Duplicate the current action"
+
+    def execute(self, context):
+        DuplicateAction(self, context)
+        return {'FINISHED'}
             
 # Operator to add the current action to the list
 class AddActionOperator(Operator):
@@ -134,16 +213,33 @@ class AddActionOperator(Operator):
     bl_description = "Add the current action to the list of actions"
 
     def execute(self, context):
-        obj = context.object
-        if obj.animation_data and obj.animation_data.action:
-            action = obj.animation_data.action
-            item = obj.action_list.add()
-            item.action = action
-            obj.elrig_active_action_index = len(obj.action_list) - 1
-            self.report({'INFO'}, f"Added action: {action.name}")
-        else:
-            self.report({'WARNING'}, "No current action to add.")
+        AddAction(self, context)
         return {'FINISHED'}
+    
+
+def AddAction(self, context):
+    obj = context.object
+    if obj.animation_data and obj.animation_data.action:
+        action = obj.animation_data.action
+        item = obj.action_list.add()
+        item.action = action
+        obj.elrig_active_action_index = len(obj.action_list) - 1
+        self.report({'INFO'}, f"Added action: {action.name}")
+    else:
+        self.report({'WARNING'}, "No current action to add.")
+
+def DuplicateAction(self, context):
+    obj = context.object
+    if obj.animation_data and obj.animation_data.action:
+        action = obj.animation_data.action
+        new_action = action.copy()
+        new_action.name = action.name + ".001"
+        item = obj.action_list.add()
+        item.action = new_action
+        obj.elrig_active_action_index = len(obj.action_list) - 1
+        self.report({'INFO'}, f"Duplicated action: {action.name}")
+    else:
+        self.report({'WARNING'}, "No current action to duplicate.")
 
 # Operator to remove an action from the list
 class RemoveActionOperator(Operator):
@@ -246,15 +342,8 @@ class CUSTOM_OT_ExportRigOperator(Operator):
         
         pushed_actions = exportFunctions.prep_export_push_NLA()
 
-        #for action in pushed_actions:
-        #    print(action.name)
-       
-
-        #print(f"Pushed actions: {[action.name for action in pushed_actions]}")
-
-        #exportFunctions.push_actions_to_nla(bpy.context.active_object, pushed_actions)
-
-        #print(f"Exported actions: {[action.name for action in actions]}")
+        #action_list = Action_List_Helper.get_action_list()       
+        
         
         custom_filename = bpy.context.scene.my_tool.SetFileName
         export_filename = f"{custom_filename}.fbx"
@@ -289,12 +378,3 @@ class CUSTOM_OT_ExportRigOperator(Operator):
        
         
         return {'FINISHED'}
-    
-
-
-# DEBUG
-
-
-        
-
-
