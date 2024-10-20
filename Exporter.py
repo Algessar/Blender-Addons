@@ -156,21 +156,12 @@ class FilterActionsOperator(Operator):
     def execute(self, context):
         obj = bpy.context.object
         if obj and self.action_name:
-            action = bpy.data.actions.get(self.action_name)
-            export_list = exportFunctions.filter_actions_to_export(obj)
+            action = bpy.data.actions.get(self.action_name)           
 
             if action:
-                action.is_starred = not action.is_starred  # Toggle the starred status
+                action.is_starred = not action.is_starred  # Toggle the starred status    
                 
-                # Add or remove the action from the list
-                if action.is_starred:
-                    self.report({'INFO'}, f"Starred action: {action.name}")
-                    export_list.append(action)
-                    print(f"Action {action.name} was added to list: {export_list}.")
-                else:
-                    export_list.remove(action)
-                    print(f"Action {action.name} was removed from list: {export_list}.")
-            
+                
             return {'FINISHED'}
 
 class CreateActionOperator(Operator):
@@ -326,7 +317,17 @@ class CUSTOM_OT_ExportRigOperator(Operator):
     def execute(self, context):
 
         
-        pushed_actions = exportFunctions.prep_export_push_NLA()       
+        obj = bpy.context.active_object
+        starred_list = []
+        starred_list = exportFunctions.get_starred_actions()
+        export_list = exportFunctions.get_actions_from_ui_list(obj)
+
+        if len(starred_list) > 0:
+            export_list = starred_list        
+        pushed_actions = exportFunctions.prep_export_push_NLA(export_list)
+
+        print(f"starred actions: {[action.name for action in starred_list]}")
+        #pushed_actions = exportFunctions.new_push_to_NLA( export_list)
         
         custom_filename = bpy.context.scene.export_props.SetFileName
         export_filename = f"{custom_filename}.fbx"
@@ -343,22 +344,31 @@ class CUSTOM_OT_ExportRigOperator(Operator):
         #refactor to work with any object
         selected_armature = bpy.context.active_object
 
-        if selected_armature and selected_armature.type == 'ARMATURE':
-            for obj in bpy.context.scene.objects:
-                if obj.parent == selected_armature:
-                    obj.select_set(True)
-                    selected_armature.select_set(True)
+        get_parented_objects()
                     
         exportFunctions.set_export_scene_params(export_filepath)
         clear_added = context.scene.clear_nla_tracks
         clear_all = context.scene.clear_all_nla_tracks
 
         if clear_added:
-            exportFunctions.clear_added_nla_tracks(selected_armature, pushed_actions)
+            exportFunctions.clear_nla_tracks(selected_armature, pushed_actions)
         if clear_all:
             Action_List_Helper.clear_all_nla_tracks(selected_armature)
-           # exportFunctions.delete_nla_tracks(selected_armature)
+
+
         print(f"exported {selected_armature.name} to {export_filepath}")
-       
         
         return {'FINISHED'}
+
+def export_filepath(export_dir, custom_filename):
+    
+    return export_filepath
+
+def get_parented_objects():
+    armature = bpy.context.active_object
+    if armature and armature.type == 'ARMATURE':
+            for obj in bpy.context.scene.objects:
+                if obj.parent == armature:
+                    obj.select_set(True)
+                    armature.select_set(True)
+    return armature

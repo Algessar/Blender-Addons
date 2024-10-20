@@ -77,7 +77,7 @@ class Action_List_Helper:
         for index, slot in enumerate(action_list):
             if hasattr(slot, 'action') and slot.action:
                 collected_actions.append(slot.action)
-                print(f"Action collected from slot {index}: {slot.action.name}")
+                #print(f"Action collected from slot {index}: {slot.action.name}")
             else:
                 print(f"No valid action found in slot {index}")
 
