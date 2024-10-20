@@ -78,19 +78,20 @@ def push_actions_to_nla_parallel(obj, actions):
     added_tracks = []
     nla_tracks = obj.animation_data.nla_tracks  # Cache nla_tracks
 
-    def process_action(index, action):
+    def process_action(action):
         if not isinstance(action, bpy.types.Action):
-            print(f"Error: Expected an Action type, but got {type(action)} at index {index}")
+            print(f"Error: Expected an Action type, but got {type(action)}")
             return None
 
         # Create a new instance of Action_List_Helper for each thread to avoid conflicts
         action_list_helper = Action_List_Helper(obj)
         action_list_helper.set_actual_action(action)  # Set the current action
-        return action_list_helper.push_to_nla(index)  # Push to NLA using index
+        
+        return action_list_helper.push_to_nla(action)  # Push to NLA using action
 
     # Use ThreadPoolExecutor to process actions in parallel, isolated by threads
     with ThreadPoolExecutor() as executor:
-        results = executor.map(process_action, range(len(actions)), actions)
+        results = executor.map(process_action, actions)
 
     for strip in results:
         if strip:
@@ -106,12 +107,10 @@ def prep_export_push_NLA(action_list):
         print("No active object selected.")
         return
     
-        #actions = filter_actions_to_export(obj)
     if not action_list:
         print("ExportFunctions: No actions found for the selected object.")
         return
 
-    #push_actions_to_nla(obj, actions)
     push_actions_to_nla_parallel(obj, action_list)
     mute_nla_tracks()
     print(f"Exported actions: {[action.name for action in action_list]}")

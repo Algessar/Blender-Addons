@@ -166,9 +166,9 @@ class Action_List_Helper:
 
         return actions
 
-    def push_to_nla(self, index):
+    def push_to_nla(self, action):
             animation_data = self.get_actual_animation_data()
-            action = self.get_action(index)
+            #action = self.get_action(index)
             if animation_data:
                 track = animation_data.nla_tracks.new()
                 strip = track.strips.new(action.name, 0, action)

@@ -315,10 +315,8 @@ class CUSTOM_OT_ExportRigOperator(Operator):
     bl_description = "Export the selected armature and its actions as an FBX file. Select the armature; any parented and visible items will also be exported"
 
     def execute(self, context):
-
         
-        obj = bpy.context.active_object
-        starred_list = []
+        obj = bpy.context.active_object        
         starred_list = exportFunctions.get_starred_actions()
         export_list = exportFunctions.get_actions_from_ui_list(obj)
 
@@ -327,7 +325,6 @@ class CUSTOM_OT_ExportRigOperator(Operator):
         pushed_actions = exportFunctions.prep_export_push_NLA(export_list)
 
         print(f"starred actions: {[action.name for action in starred_list]}")
-        #pushed_actions = exportFunctions.new_push_to_NLA( export_list)
         
         custom_filename = bpy.context.scene.export_props.SetFileName
         export_filename = f"{custom_filename}.fbx"
