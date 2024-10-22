@@ -93,7 +93,7 @@ def work_on_main_rig():
     rename_bones("deprecated-", "DEF-") #We go to Pose mode here
 
     # I can also go to the mesh here and rename all the vertex groups that were changed. 
-    rename_vertex_groups("DEF-", "deprecated-")
+    #rename_vertex_groups("DEF-", "deprecated-")
 
     #DESELECT ALL BONES
     bpy.ops.pose.select_all(action='DESELECT')
@@ -239,6 +239,9 @@ def finish():
     for bone in armature.data.edit_bones:
         if bone.name.startswith("DEF-"):
             bone.use_connect = False
+
+    
+    fix_root_orientation()
         
 
     # Cleanup 
@@ -258,7 +261,9 @@ def finish():
 
     if is_root_delete:
         delete_root()
+
     
+    rename_vertex_groups("DEF-", "deprecated-")
 
 
     print("Conversion finished")
@@ -482,6 +487,9 @@ def rename_bones(new_prefix, old_prefix):
 
 def rename_vertex_groups(new_prefix, old_prefix):
     # Get all mesh objects parented to the rig
+
+    if bpy.context.mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode='OBJECT')
     mesh_objects = [obj for obj in bpy.context.object.children if obj.type == 'MESH']
     if not mesh_objects:
         print("No mesh object found.")
@@ -555,6 +563,26 @@ def delete_root():
         print("Deleted root bone")
 
     return
+
+from mathutils import Matrix
+
+def fix_root_orientation():
+    #root orientation should be Y up, Z forward
+
+    if bpy.context.object.mode != 'EDIT':
+        bpy.ops.object.mode_set(mode='EDIT')
+    armature = bpy.context.active_object
+    for bone in armature.data.edit_bones:
+        if "root" in bone.name.lower():
+            
+            #rotate the root bones to be Y yp, Z forward (-90 degrees)
+            rotation_matrix = Matrix.Rotation(1.5708, 4, 'X')  # -90 degrees around X-axis
+            bone.transform(rotation_matrix @ bone.matrix.to_3x3().to_4x4().inverted())
+            bone.roll = 0
+
+            print("Fixed root bone orientation")
+        
+
 
 
 bpy.types.Scene.split_bones_prop = BoolProperty(

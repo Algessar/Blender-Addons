@@ -77,6 +77,16 @@ def register():
         description="Clear all NLA tracks after export. If neither is selected, the NLA tracks will be kept",
         default=False
     )
+    bpy.types.Scene.overwrite_file = BoolProperty(
+        name="Overwrite Existing",
+        description="Overwrite existing files",
+        default=False
+    )
+    bpy.types.Scene.export_mesh = BoolProperty(
+        name="Export Mesh",
+        description="Export mesh with the rig",
+        default=False
+    )
 
     bpy.types.Action.is_starred = bpy.props.BoolProperty(name="Starred", default=False)
 
@@ -102,6 +112,10 @@ def unregister():
     del bpy.types.Scene.clear_all_nla_tracks
 
     del bpy.types.Action.is_starred
+
+    del bpy.types.Scene.export_mesh
+    del bpy.types.Scene.overwrite_file
+    
 
 
 

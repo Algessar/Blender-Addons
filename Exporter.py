@@ -43,6 +43,17 @@ clear_all_nla_tracks: BoolProperty(
     description="Clear all NLA tracks after export. If neither is selected, the NLA tracks will be kept.",
     default=False
 ) # type: ignore 
+overwrite_file: BoolProperty(
+    name="Overwrite File",
+    description="Overwrite the file if it already exists",
+    default=False
+) # type: ignore
+export_mesh: BoolProperty(
+    name="Export with Mesh",
+    description="Export the mesh of the selected object",
+    default=True
+) # type: ignore
+
 
 class VIEW_3D_UI_Elements(Panel):
     bl_label = "Export UI"
@@ -93,14 +104,19 @@ class VIEW_3D_UI_Elements(Panel):
         layout.operator("elrig.set_file_path", text="Set File Path")
         layout.separator()
         layout.prop(export_tool, "SetFileName")
+        layout.prop(scene, "overwrite_file")
         layout.separator()
 
+        layout.separator()
+        
+        layout.prop(scene, "export_mesh")
+        layout.separator()
+        layout.operator("elrig.export_rig", text="Export Rig")
         layout.separator()
         layout.label(text="Export Cleanup Options:")
         layout.prop(scene, "clear_nla_tracks")
         layout.prop(scene, "clear_all_nla_tracks")
         layout.separator()
-        layout.operator("elrig.export_rig", text="Export Rig")
 
 
 # UIList
@@ -327,21 +343,21 @@ class CUSTOM_OT_ExportRigOperator(Operator):
         print(f"starred actions: {[action.name for action in starred_list]}")
         
         custom_filename = bpy.context.scene.export_props.SetFileName
-        export_filename = f"{custom_filename}.fbx"
-
         export_dir = bpy.context.scene.export_props.export_filepath
-        
-        version = 1
-        while True:
-            export_filepath = os.path.join(export_dir, export_filename)
-            if not os.path.exists(export_filepath):
-                break
-            version += 1
-            export_filename = f"{custom_filename}_V{version}.fbx"
-        #refactor to work with any object
+
+              
+        export_filepath = get_export_filepath(custom_filename, export_dir)
+
         selected_armature = bpy.context.active_object
 
-        get_parented_objects()
+        print(f"Exporting {selected_armature.name} to {export_filepath}")
+        
+
+        if(bpy.context.scene.export_mesh):
+            #TODO: Make sure any other selected objects are deselected.            
+            get_parented_objects()
+
+        
                     
         exportFunctions.set_export_scene_params(export_filepath)
         clear_added = context.scene.clear_nla_tracks
@@ -356,16 +372,51 @@ class CUSTOM_OT_ExportRigOperator(Operator):
         print(f"exported {selected_armature.name} to {export_filepath}")
         
         return {'FINISHED'}
-
-def export_filepath(export_dir, custom_filename):
     
-    return export_filepath
+
+
+def get_latest_version_filepath(custom_filename, export_dir):
+    version = 1
+    latest_filepath = None
+    
+    while True:
+        # Construct the filename with the version number
+        export_filename = f"{custom_filename}_V{version}.fbx"
+        export_filepath = os.path.join(export_dir, export_filename)
+        
+        # If the file exists, store the latest version's path
+        if os.path.exists(export_filepath):
+            latest_filepath = export_filepath
+            version += 1  # Continue searching for higher versions
+        else:
+            break  # Stop once we reach a version that doesn't exist
+    
+    # Return the latest version's path (if any) and the next available version's path
+    return latest_filepath, export_filepath
+
+def get_export_filepath(custom_filename, export_dir):
+    overwrite = bpy.context.scene.overwrite_file
+    
+    # Get the latest version and the next available version's paths
+    latest_filepath, next_filepath = get_latest_version_filepath(custom_filename, export_dir)
+    
+    if overwrite and latest_filepath:
+        # If overwriting is allowed, return the latest file path to overwrite
+        return latest_filepath
+    else:
+        # If not overwriting, return the next available file path (incrementing the version)
+        return next_filepath
 
 def get_parented_objects():
     armature = bpy.context.active_object
-    if armature and armature.type == 'ARMATURE':
-            for obj in bpy.context.scene.objects:
-                if obj.parent == armature:
-                    obj.select_set(True)
-                    armature.select_set(True)
+    if bpy.context.scene.export_mesh:
+        if armature and armature.type == 'ARMATURE':
+                for obj in bpy.context.scene.objects:
+                    if obj.parent == armature:
+                        obj.select_set(True)
+                        armature.select_set(True)
+                    else:
+                        #deselect all objects
+                        obj.select_set(False)                        
+                        armature.select_set(True)
     return armature
