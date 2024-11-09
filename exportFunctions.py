@@ -117,22 +117,69 @@ def prep_export_push_NLA(action_list):
     return action_list
 
 
-def set_export_scene_params(export_filepath):
+def export_unity(export_filepath, add_leaf_bones=False, ):
+
+
+
     return bpy.ops.export_scene.fbx(
+        #Scene
+        filepath=export_filepath,
+        use_selection=True,
+        object_types={"MESH", "ARMATURE", 'EMPTY'},
+        path_mode="COPY",
+        check_existing=False,
+        
+        embed_textures=True,
+
+        #Geometry
+        global_scale=1.0,
+        apply_scale_options='FBX_SCALE_ALL',
+        axis_forward='Z',
+        axis_up='Y',
+        use_subsurf=False,
+
+        #Normals
+        mesh_smooth_type='FACE',
+
+        #Armature
+        use_armature_deform_only=True,
+        use_custom_props=False,
+        add_leaf_bones=False,
+
+        #Animation
+        bake_anim=True,
+        bake_anim_use_all_bones=True,
+        bake_anim_use_nla_strips=True,
+        bake_anim_use_all_actions=False,
+        bake_anim_force_startend_keying=True,
+        bake_anim_step=0.1,
+        bake_anim_simplify_factor=0,
+    )
+
+def export_unreal(export_filepath):
+    return bpy.ops.export_scene.fbx(
+        #Scene
         filepath=export_filepath,
         use_selection=True,
         object_types={"MESH", "ARMATURE"},
         path_mode="COPY",
         check_existing=False,
-        axis_forward='Z',
-        axis_up='Y',
 
+        #Geometry
         global_scale=1.0,
+        axis_forward='X',
+        axis_up='Z',
         apply_scale_options='FBX_SCALE_ALL',
+
+        #Normals
+        mesh_smooth_type='FACE',
+        
+        #Armature
         use_armature_deform_only=True,
         use_custom_props=False,
         add_leaf_bones=False,
 
+        #Animation
         bake_anim=True,
         bake_anim_use_all_bones=True,
         bake_anim_use_nla_strips=True,
@@ -142,6 +189,11 @@ def set_export_scene_params(export_filepath):
         bake_anim_simplify_factor=0,
         embed_textures=True,
     )
+
+def prep_UE_export():
+    # Exporting armatures to UE requires renaming the root bone, 
+    # so it handles root motion correctly.
+    return
 
 
 def mute_nla_tracks():

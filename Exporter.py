@@ -53,6 +53,16 @@ export_mesh: BoolProperty(
     description="Export the mesh of the selected object",
     default=True
 ) # type: ignore
+unity: BoolProperty(
+    name="Export for Unity",
+    description="Export the rig for Unity",
+    default=True
+) # type: ignore
+unreal: BoolProperty(
+    name="Export for Unreal",
+    description="Export the rig for Unreal",
+    default=False
+) # type: ignore
 
 
 class VIEW_3D_UI_Elements(Panel):
@@ -106,9 +116,11 @@ class VIEW_3D_UI_Elements(Panel):
         layout.prop(export_tool, "SetFileName")
         layout.prop(scene, "overwrite_file")
         layout.separator()
-
         layout.separator()
-        
+        layout.label(text="Target Engine:")
+        layout.prop(scene, "unity")
+        layout.prop(scene, "unreal")
+        layout.separator()
         layout.prop(scene, "export_mesh")
         layout.separator()
         layout.operator("elrig.export_rig", text="Export Rig")
@@ -359,7 +371,7 @@ class CUSTOM_OT_ExportRigOperator(Operator):
 
         
                     
-        exportFunctions.set_export_scene_params(export_filepath)
+        exportFunctions.export_unity(export_filepath)
         clear_added = context.scene.clear_nla_tracks
         clear_all = context.scene.clear_all_nla_tracks
 

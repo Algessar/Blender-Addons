@@ -30,7 +30,7 @@ bl_info = {
 
 import bpy
 from bpy.props import IntProperty, CollectionProperty, PointerProperty, StringProperty, BoolProperty
-from . import RigifyConverter, Exporter
+from . import RigifyConverter, Exporter, retopoChecker
 
 
 classes = [RigifyConverter.OBJECT_OT_ConvertToGameRig, RigifyConverter.VIEW3D_PT_RigifyGameConverter,
@@ -40,7 +40,7 @@ classes = [RigifyConverter.OBJECT_OT_ConvertToGameRig, RigifyConverter.VIEW3D_PT
             Exporter.ElRigActionItem, Exporter.ExportProperties,
             Exporter.CUSTOM_OT_MoveActionDown, Exporter.CUSTOM_OT_MoveActionUp,
             Exporter.CreateActionOperator, Exporter.DuplicateActionOperator,
-            Exporter.FilterActionsOperator, 
+            Exporter.FilterActionsOperator, retopoChecker.RetopoCheckerPanel, retopoChecker.OBJECT_OT_LoopCheck,
             ]
 
 
@@ -85,6 +85,16 @@ def register():
     bpy.types.Scene.export_mesh = BoolProperty(
         name="Export Mesh",
         description="Export mesh with the rig",
+        default=False
+    )
+    bpy.types.Scene.unity = BoolProperty(
+        name="Unity",
+        description="Export for Unity",
+        default=True
+    )
+    bpy.types.Scene.unreal = BoolProperty(
+        name="Unreal",
+        description="Export for Unreal",
         default=False
     )
 
