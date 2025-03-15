@@ -101,6 +101,10 @@ class VIEW_3D_UI_Elements(Panel):
         else:
             box = layout.box()
             box.label(text="No object selected")    
+
+        layout.operator("elrig.push_starred_actions",
+                        text="Push Starred Actions to NLA")
+        
         
         global export_dir
         folder_directory = export_dir
@@ -163,6 +167,7 @@ class ACTION__UI_UL_actions(UIList):
             is_starred = item.action.is_starred if item.action else False
             star_icon = 'SOLO_ON' if is_starred else 'SOLO_OFF'
             op = row.operator("elrig.filter_actions", text="", icon=star_icon)
+            op.index = index
             op.action_name = item.action.name if item.action else ""           
         
         
@@ -181,16 +186,15 @@ class FilterActionsOperator(Operator):
 
     action_name: bpy.props.StringProperty() # type: ignore
 
-    def execute(self, context):
-        obj = bpy.context.object
-        if obj and self.action_name:
-            action = bpy.data.actions.get(self.action_name)           
+    index: IntProperty() #type: ignore  # Track by index instead of name
 
-            if action:
-                action.is_starred = not action.is_starred  # Toggle the starred status    
-                
-                
-            return {'FINISHED'}
+    def execute(self, context):
+        obj = context.object
+        if obj and 0 <= self.index < len(obj.action_list):
+            item = obj.action_list[self.index]
+            if item.action:
+                item.action.is_starred = not item.action.is_starred
+        return {'FINISHED'}
 
 class CreateActionOperator(Operator):
     bl_idname = "elrig.create_action"
@@ -199,12 +203,25 @@ class CreateActionOperator(Operator):
 
     def execute(self, context):
         obj = context.object
-        action = bpy.data.actions.new(name="Action")
+        base_name = "NewAction"
+        # Ensure the action name is unique
+        action_name = self.get_unique_action_name(base_name)
+        action = bpy.data.actions.new(name=action_name)
         obj.animation_data_create()
         obj.animation_data.action = action
+        
         AddAction(self, context)
-        self.report({'INFO'}, "Created new action.")
+        self.report({'INFO'}, f"Created new action: {action.name}")
         return {'FINISHED'}
+    
+    def get_unique_action_name(self, base_name):
+        # Generate a unique name like "NewAction", "NewAction.001", etc.
+        num = 1
+        name = base_name
+        while name in bpy.data.actions:
+            name = f"{base_name}.{num:03d}"
+            num += 1
+        return name
     
 class DuplicateActionOperator(Operator):
     bl_idname = "elrig.duplicate_action"
@@ -212,6 +229,7 @@ class DuplicateActionOperator(Operator):
     bl_description = "Duplicate the current action"
 
     def execute(self, context):
+        
         DuplicateAction(self, context)
         return {'FINISHED'}
             
@@ -229,8 +247,12 @@ def AddAction(self, context):
     obj = context.object
     if obj.animation_data and obj.animation_data.action:
         action = obj.animation_data.action
+        # Check if the action is already in the list to avoid duplicates
+        if any(item.action == action for item in obj.action_list):
+            self.report({'WARNING'}, "Action already in the list!")
+            return
         item = obj.action_list.add()
-        item.action = action
+        item.action = action  # This references the live action object
         obj.elrig_active_action_index = len(obj.action_list) - 1
         self.report({'INFO'}, f"Added action: {action.name}")
     else:
@@ -241,6 +263,7 @@ def DuplicateAction(self, context):
     if obj.animation_data and obj.animation_data.action:
         action = obj.animation_data.action
         new_action = action.copy()
+        new_action.is_starred = False
         new_action.name = action.name + ".001"
         item = obj.action_list.add()
         item.action = new_action
@@ -260,6 +283,7 @@ class RemoveActionOperator(Operator):
         obj = context.object
         if 0 <= self.index < len(obj.action_list):
             obj.action_list.remove(self.index)
+
             self.report({'INFO'}, "Removed action from list.")
         else:
             self.report({'WARNING'}, "Invalid index.")
@@ -384,6 +408,40 @@ class CUSTOM_OT_ExportRigOperator(Operator):
         print(f"exported {selected_armature.name} to {export_filepath}")
         
         return {'FINISHED'}
+
+class PushStarredActionsToNLA(bpy.types.Operator):
+    bl_idname = "elrig.push_starred_actions"
+    bl_label = "Push Starred to NLA"
+    bl_description = "Push all starred actions to NLA tracks"
+
+    def execute(self, context):
+        obj = context.active_object
+        
+        if not obj:
+            self.report({'WARNING'}, "No active object selected")
+            return {'CANCELLED'}
+        
+        if not hasattr(obj, "action_list"):
+            self.report({'WARNING'}, "Active object has no action list")
+            return {'CANCELLED'}
+
+        # Collect starred actions
+        starred_actions = [item.action for item in obj.action_list 
+                         if item.action and item.action.is_starred]
+        
+        if not starred_actions:
+            self.report({'INFO'}, "No starred actions found")
+            return {'CANCELLED'}
+
+        # Push to NLA
+        try:
+            exportFunctions.push_actions_to_nla_parallel(obj, starred_actions)
+            self.report({'INFO'}, f"Pushed {len(starred_actions)} starred actions to NLA")
+        except Exception as e:
+            self.report({'ERROR'}, f"Error pushing actions: {str(e)}")
+            return {'CANCELLED'}
+
+        return {'FINISHED'}
     
 
 
@@ -432,3 +490,6 @@ def get_parented_objects():
                         obj.select_set(False)                        
                         armature.select_set(True)
     return armature
+
+
+

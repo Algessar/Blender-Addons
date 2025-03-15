@@ -41,6 +41,7 @@ classes = [RigifyConverter.OBJECT_OT_ConvertToGameRig, RigifyConverter.VIEW3D_PT
             Exporter.CUSTOM_OT_MoveActionDown, Exporter.CUSTOM_OT_MoveActionUp,
             Exporter.CreateActionOperator, Exporter.DuplicateActionOperator,
             Exporter.FilterActionsOperator, retopoChecker.RetopoCheckerPanel, retopoChecker.OBJECT_OT_LoopCheck,
+            Exporter.PushStarredActionsToNLA,
             ]
 
 
